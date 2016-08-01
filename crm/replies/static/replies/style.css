@@ -1,0 +1,42 @@
+body {
+    font-family: Arial;
+}   
+.thread {
+    display: block;
+    background-color: #E8EBEA;
+    margin: 10px;
+    padding: 10px;
+    border: 1px solid gray; 
+}
+
+#thread-list {
+    background-color: gray;
+    width: 20%;
+    height: 100%;
+    float: left;
+    margin: 0px;
+    padding: 0px;
+    border: 0px;
+}   
+#message-iframe {
+    background-color: #E8EBEA;
+    width: 70%;
+    height: 500px;
+    min-height: 100%;
+    float: center;
+    display: float;
+}
+.message {
+    background-color: #C3E9FA;
+    margin: 10px; 
+}   
+.send-box {
+    display:block;
+    width: 100%;
+    font-size: 95%;
+}
+.big-button {
+    width: 20%;
+    background-color: #5EC9F7;
+    float: right;
+}    
