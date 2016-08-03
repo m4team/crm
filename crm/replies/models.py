@@ -22,13 +22,14 @@ class Agent(models.Model):
 
     def __str__(self):
         return self.full_name
-    
+
 class Thread(models.Model):
     customer = models.ForeignKey(Customer)
     topic = models.CharField(max_length=50, default='Conversation')
     public = models.BooleanField(default=False)
     closed = models.BooleanField(default=False)
-
+    agents = models.ManyToManyField(Agent)
+    
     def __str__(self):
         return self.topic
     
@@ -38,9 +39,19 @@ class Thread(models.Model):
 
     def responded(self):
         """ Return False if the last message is from the customer"""
-        pass
+        try:
+            return not self.message_set.order_by('-timestamp_ts')[0].inbound
+        except:
+            return True
+    
+    
+class Brand(models.Model):
+    brand = models.CharField(max_length=100)
 
-        
+    def __str__(self):
+        return self.brand
+
+    
 class Message(models.Model):
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
     from_agent = models.ForeignKey(Agent, null=True, blank=True)
@@ -48,7 +59,8 @@ class Message(models.Model):
     content = models.TextField()
     timestamp_ts = models.DateTimeField(default=timezone.now)
     subject_line = models.CharField(max_length=100, null=True, blank=True)
-
+    brand = models.ForeignKey(Brand, null=True, blank=True)
+    
     class Meta:
         ordering = ['timestamp_ts']
         

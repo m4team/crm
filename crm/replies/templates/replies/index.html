@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> CRM </title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'replies/style.css' %}">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+	  $(".thread").hover(
+	      function(){
+		  $(this).css({"background-color": "#FFFFFF"});
+	      },
+	      function(){
+		  $(this).css({"background-color": "#E8EBEA"});
+	      });
+	  $(".thread").click(function(){
+	      $("#message-iframe").css("visibility", "visible");
+	      document.getElementById("message-iframe").src = "/replies/thread/"
+		  + $(this).data("id"); // hard-code for now.
+	      $("#customer-iframe").css("visibility", "visible");
+	      document.getElementById("customer-iframe").src = "/replies/customer/profile/"
+		  + $(this).data("customerid"); // another hard code
+		  
+	  });
+      });     
+    </script>
+  </head>
+  <body>
+    <h1> Email Dashboard </h1>
+    <p> Hello, {{ agent.full_name }} </p>
+    <div id="thread-list">
+      {% for thread in agent.thread_set.all %}
+      {% if not thread.closed or not thread.responded %}
+      <div class="thread" data-id={{ thread.id }}
+	   data-customerid={{ thread.customer.id }}>
+	{{ thread.topic }}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <iframe id="message-iframe" src = "" style="visibility:hidden;">
+    </iframe>
+    <iframe id="customer-iframe" src="" style="visibility:hidden;">
+    </iframe>
+  </body>
+</html>
+

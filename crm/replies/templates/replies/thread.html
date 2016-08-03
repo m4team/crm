@@ -19,6 +19,14 @@
       <span> {{ message.web_view | safe }}</span>
     </div>
     {% endfor %}
+    {% if messages %}
+    <ul class="messages">
+      {% for m in messages %}
+      <li {% if m.tags %} class="{{ m.tags }}" {% endif %}>{{ m }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
     <form action="{% url 'replies:thread' thread.id %}" method="post">
       {% csrf_token %}
       <div class="send-box"> {{ form }} </div>

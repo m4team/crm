@@ -20,12 +20,17 @@ body {
 }   
 #message-iframe {
     background-color: #E8EBEA;
-    width: 70%;
-    height: 500px;
+    width: 40%;
+    height: 500px; 
     min-height: 100%;
     float: center;
     display: float;
 }
+#customer-iframe {
+    float: right;
+    min-height: 100%;
+    width:30%;
+}    
 .message {
     background-color: #C3E9FA;
     margin: 10px; 
