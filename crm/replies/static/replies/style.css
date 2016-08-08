@@ -1,6 +1,9 @@
 body {
     font-family: Arial;
-}   
+}
+element.style {
+    display:flex;
+}    
 .thread {
     display: block;
     background-color: #E8EBEA;
@@ -20,16 +23,18 @@ body {
 }   
 #message-iframe {
     background-color: #E8EBEA;
-    width: 40%;
+    width: 50%;
     height: 500px; 
     min-height: 100%;
     float: center;
     display: float;
 }
 #customer-iframe {
-    float: right;
+    float: center;
+    height: 500px;
     min-height: 100%;
-    width:30%;
+    width:29%;
+    display:inline;
 }    
 .message {
     background-color: #C3E9FA;
@@ -44,4 +49,5 @@ body {
     width: 20%;
     background-color: #5EC9F7;
     float: right;
+    font-size: 80%;
 }    

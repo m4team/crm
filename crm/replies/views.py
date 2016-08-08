@@ -3,7 +3,7 @@ from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
 from django.contrib import messages
-from .models import Customer, Thread, Message
+from .models import Customer, Thread, Message, Agent
 from .forms import MessageForm
 
 import requests
@@ -70,9 +70,64 @@ def thread(request, thread_id):
     return render(request, 'replies/thread.html', context)
 
 
-def customer_chat(request, customer_id):
+def customer_profile(request, customer_id):
     customer = get_object_or_404(Customer, pk=customer_id)
     context = {
         'customer' : customer
     }
     return render(request, 'replies/customer_profile.html', context)
+
+def process_reply(request):
+    """Process replies and messages raw data"""
+    # post request for replies
+    # each request have:
+    # emd5, message_html, message_text, insert_ts
+    # smtp_id, subject
+    if request.method != 'POST':
+        return HttpResponse(405)
+    else:
+        data = request.data
+        emd5 = data['emd5']
+        customer = get_object_or_404(Customer, emd5=emd5) # or create a record
+        thread = customer.get_latest_thread()
+        if thread == None:
+            # create new thread
+            thread = Thread(customer=customer)
+            thread.save()
+        msg = Message(thread=thread, inbound=True, content=data['message_html'],
+                      content_text=data.get('message_text'),
+                      timestamp_ts=data.get('insert_ts'),
+                      external_id=data.get('smtp_id'),
+                      subject_line=data.get('subject'))
+        msg.save()
+        return HttpResponse(200, 'Success: Message saved')
+
+def process_message(request):    
+    """Process replies and messages raw data"""
+    # post request for message
+    # each request have:
+    # emd5, body, timestamp_ts
+    # token, subject, brand (id), agent_id, thread_id
+    if request.method != 'POST':
+        return HttpResponse(405)
+    else:
+        data = request.data
+        try:
+            thread_id = data['thread_id']
+            thread = get_object_or_404(Thread, pk=thread_id)
+        except KeyError:
+            customer = get_object_or_404(Customer, emd5=data.get('emd5'))
+            thread = customer.get_latest_thread()
+            if thread == None:
+                thread = Thread(customer=customer)
+                thread.save()
+        agent = get_object_or_404(Agent, ext_user_id=data.get('agent_id'))
+        msg = Message(thread=thread, inbound=False, content=data['body'],
+                      timestamp_ts=data.get('timestamp_ts'),
+                      external_id=data.get('token'),
+                      subject_line=data.get('subject'),
+                      brand=data.get('brand'),
+                      from_agent=agent)
+        msg.save()
+        return HttpResponse(200, 'Success: Message Saved')
+            

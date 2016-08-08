@@ -7,13 +7,18 @@ import utils as u
 
 class Customer(models.Model):
     emd5 = models.CharField(max_length=32)
-    email_domain = models.CharField(max_length=50)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.first_name + ' ' + self.last_name
-    
+
+    def get_latest_thread(self):
+        try:
+            self.thread_set.filter(closed=False).order_by('-latest_activity')[0]
+        except IndexError:
+            return None
+        
 class Agent(models.Model):
     user = models.OneToOneField(User, null=True)
     ext_user_id = models.IntegerField() # external id from Pentius
@@ -33,7 +38,7 @@ class Thread(models.Model):
     def __str__(self):
         return self.topic
     
-    def lastest_activity(self):
+    def latest_activity(self):
         """ Return the last time this thread has a message"""
         return max([x.timestamp_ts for x in self.message_set.all()])
 
@@ -57,9 +62,12 @@ class Message(models.Model):
     from_agent = models.ForeignKey(Agent, null=True, blank=True)
     inbound = models.BooleanField(default=False)
     content = models.TextField()
+    content_text = models.TextField(null=True, blank=True)
     timestamp_ts = models.DateTimeField(default=timezone.now)
     subject_line = models.CharField(max_length=100, null=True, blank=True)
     brand = models.ForeignKey(Brand, null=True, blank=True)
+    external_id = models.CharField(max_length=100, null=True,
+                                   blank=True, unique=True) # email token
     
     class Meta:
         ordering = ['timestamp_ts']
