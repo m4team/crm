@@ -3,7 +3,7 @@ from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
 from django.contrib import messages
-from .models import Customer, Thread, Message, Agent
+from .models import Customer, Thread, Message, Agent, Brand
 from .forms import MessageForm
 
 import requests
@@ -86,7 +86,7 @@ def process_reply(request):
     if request.method != 'POST':
         return HttpResponse(405)
     else:
-        data = request.data
+        data = request.POST
         emd5 = data['emd5']
         customer = get_object_or_404(Customer, emd5=emd5) # or create a record
         thread = customer.get_latest_thread()
@@ -111,7 +111,7 @@ def process_message(request):
     if request.method != 'POST':
         return HttpResponse(405)
     else:
-        data = request.data
+        data = request.POST
         try:
             thread_id = data['thread_id']
             thread = get_object_or_404(Thread, pk=thread_id)
@@ -121,12 +121,13 @@ def process_message(request):
             if thread == None:
                 thread = Thread(customer=customer)
                 thread.save()
+        brand = get_object_or_404(Brand, external_id=data.get('brand'))
         agent = get_object_or_404(Agent, ext_user_id=data.get('agent_id'))
         msg = Message(thread=thread, inbound=False, content=data['body'],
                       timestamp_ts=data.get('timestamp_ts'),
                       external_id=data.get('token'),
                       subject_line=data.get('subject'),
-                      brand=data.get('brand'),
+                      brand=brand,
                       from_agent=agent)
         msg.save()
         return HttpResponse(200, 'Success: Message Saved')

@@ -14,10 +14,13 @@ class Customer(models.Model):
         return self.first_name + ' ' + self.last_name
 
     def get_latest_thread(self):
+        threads = self.thread_set.filter(closed=False).all()
         try:
-            self.thread_set.filter(closed=False).order_by('-latest_activity')[0]
+            return sorted(threads, key=lambda thread: thread.latest_activity(),
+                          reverse=True)[0] # None value would be sorted last
         except IndexError:
             return None
+        
         
 class Agent(models.Model):
     user = models.OneToOneField(User, null=True)
@@ -39,8 +42,14 @@ class Thread(models.Model):
         return self.topic
     
     def latest_activity(self):
-        """ Return the last time this thread has a message"""
-        return max([x.timestamp_ts for x in self.message_set.all()])
+        """ 
+        Return the last time this thread has a message
+        Return None if thread doesn't have any message
+        """
+        try:
+            return max([x.timestamp_ts for x in self.message_set.all()])
+        except ValueError: # no messages yet
+            return None
 
     def responded(self):
         """ Return False if the last message is from the customer"""
@@ -51,7 +60,8 @@ class Thread(models.Model):
     
     
 class Brand(models.Model):
-    brand = models.CharField(max_length=100)
+    brand = models.CharField(max_length=100, unique=True)
+    external_id = models.IntegerField(default=0)
 
     def __str__(self):
         return self.brand
