@@ -3,6 +3,8 @@ from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
 from django.contrib import messages
+from django.db import IntegrityError
+
 from .models import Customer, Thread, Message, Agent, Brand
 from .forms import MessageForm
 
@@ -38,14 +40,15 @@ def thread(request, thread_id):
             try:
                 brand = form.cleaned_data['brand']
             except KeyError:
-                brand = thread.message_set.filter(inbound=False).order_by('-timestamp_ts')[0].brand.brand
+                brand = thread.message_set.filter(inbound=False).order_by('-timestamp_ts')[0].brand
             data = {
                 'agentID': request.user.agent.ext_user_id,
                 'body': form.cleaned_data['content'],
-                'brand': brand,
+                'brand': brand.brand,
                 'fromName': request.user.agent.full_name,
                 'emd5': thread.customer.emd5,
-                'subject': subject_line
+                'subject': subject_line,
+                'thread_id': thread.id
             }
             r = requests.post('%s/send' % LOMAN_API_URL, json=data)
             if r.ok:
@@ -54,11 +57,16 @@ def thread(request, thread_id):
                               from_agent=request.user.agent,
                               inbound=False,
                               timestamp_ts=timezone.now(),
-                              thread=thread)
+                              thread=thread,
+                              subject_line=subject_line,
+                              brand=brand,
+                              external_id = r.json().get('token'))
                 msg.save()
             else:
-                messages.add_message(request, messages.ERROR,
-                                     'Failed to send your message. Please try again later.')
+                messages.add_message(
+                    request, messages.ERROR,
+                    'Failed to send your message. Please try again later.'
+                )
     else:
         form = MessageForm()
     # Load new thread object to include the new message
@@ -94,12 +102,16 @@ def process_reply(request):
             # create new thread
             thread = Thread(customer=customer)
             thread.save()
-        msg = Message(thread=thread, inbound=True, content=data['message_html'],
-                      content_text=data.get('message_text'),
-                      timestamp_ts=data.get('insert_ts'),
-                      external_id=data.get('smtp_id'),
-                      subject_line=data.get('subject'))
-        msg.save()
+        try:
+            msg, created = Message.objects.get_or_create(
+                thread=thread, inbound=True, content=data['message_html'],
+                content_text=data.get('message_text'),
+                timestamp_ts=data.get('insert_ts'),
+                external_id=data.get('smtp_id'),
+                subject_line=data.get('subject')
+            )
+        except IntegrityError: # duplicate external_id
+            pass
         return HttpResponse(200, 'Success: Message saved')
 
 def process_message(request):    
@@ -107,7 +119,7 @@ def process_message(request):
     # post request for message
     # each request have:
     # emd5, body, timestamp_ts
-    # token, subject, brand (id), agent_id, thread_id
+    # token, subject, brand, agent_id, thread_id
     if request.method != 'POST':
         return HttpResponse(405)
     else:
@@ -121,14 +133,18 @@ def process_message(request):
             if thread == None:
                 thread = Thread(customer=customer)
                 thread.save()
-        brand = get_object_or_404(Brand, external_id=data.get('brand'))
-        agent = get_object_or_404(Agent, ext_user_id=data.get('agent_id'))
-        msg = Message(thread=thread, inbound=False, content=data['body'],
-                      timestamp_ts=data.get('timestamp_ts'),
-                      external_id=data.get('token'),
-                      subject_line=data.get('subject'),
-                      brand=brand,
-                      from_agent=agent)
-        msg.save()
+        brand = get_object_or_404(Brand, brand=data.get('brand'))
+        agent = get_object_or_404(Agent, ext_user_id=int(data.get('agent_id')))
+        try:
+            msg, created = Message.objects.get_or_create(
+                thread=thread, inbound=False, content=data['body'],
+                timestamp_ts=data.get('timestamp_ts'),
+                external_id=data.get('token'),
+                subject_line=data.get('subject'),
+                brand=brand,
+                from_agent=agent
+            )
+        except IntegrityError: # Duplicate external id
+            pass
         return HttpResponse(200, 'Success: Message Saved')
             
